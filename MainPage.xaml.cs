@@ -1,5 +1,7 @@
 using Microsoft.Maui.Controls;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using SpreadsheetApp.Models;
 using SpreadsheetApp.Parsers;
 using SpreadsheetApp.Services;
@@ -13,7 +15,7 @@ namespace SpreadsheetApp
 
         private Spreadsheet _spreadsheet;
         private GoogleDriveManager _driveManager;
-        private Entry[,] _entries;
+        private readonly List<List<Entry>> _entries = new();
         private Entry? _selectedEntry;
 
         public MainPage()
@@ -21,9 +23,24 @@ namespace SpreadsheetApp
             InitializeComponent();
             _spreadsheet = new Spreadsheet(InitialRowCount, InitialColumnCount);
             _driveManager = new GoogleDriveManager();
-            _entries = new Entry[_spreadsheet.RowCount, _spreadsheet.ColumnCount];
 
             CreateGrid();
+        }
+
+        private Entry CreateEntry(int row, int col, SpreadsheetApp.Models.Cell? cell)
+        {
+            var entry = new Entry
+            {
+                Text = cell != null ? FormatCellValue(cell.Value) : "",
+                TextColor = (cell != null && cell.Value == null && !string.IsNullOrWhiteSpace(cell.Expression)) ? Colors.Red : Colors.White,
+                Margin = new Thickness(1)
+            };
+
+            int r = row;
+            int c = col;
+            entry.Focused += (s, e) => Entry_Focused(r, c, entry);
+            entry.Unfocused += (s, e) => Entry_Unfocused(r, c, entry);
+            return entry;
         }
 
         private void CreateGrid()
@@ -31,10 +48,10 @@ namespace SpreadsheetApp
             SpreadsheetGrid.Children.Clear();
             SpreadsheetGrid.RowDefinitions.Clear();
             SpreadsheetGrid.ColumnDefinitions.Clear();
+            _entries.Clear();
 
             int rows = _spreadsheet.RowCount;
             int cols = _spreadsheet.ColumnCount;
-            _entries = new Entry[rows, cols];
 
             // Створення визначень колонок (0 - для номерів рядків, решта - для даних)
             SpreadsheetGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -79,28 +96,19 @@ namespace SpreadsheetApp
                 Grid.SetColumn(label, 0);
                 SpreadsheetGrid.Children.Add(label);
 
+                var rowEntries = new List<Entry>(cols);
                 for (int col = 0; col < cols; col++)
                 {
                     string cellName = Spreadsheet.GetColumnName(col) + (row + 1);
                     var cell = _spreadsheet.GetCell(cellName);
 
-                    var entry = new Entry
-                    {
-                        Text = cell != null ? FormatCellValue(cell.Value) : "",
-                        TextColor = (cell != null && cell.Value == null && !string.IsNullOrWhiteSpace(cell.Expression)) ? Colors.Red : Colors.White,
-                        Margin = new Thickness(1)
-                    };
-
-                    int r = row;
-                    int c = col;
-                    entry.Focused += (s, e) => Entry_Focused(r, c, entry);
-                    entry.Unfocused += (s, e) => Entry_Unfocused(r, c, entry);
-
+                    var entry = CreateEntry(row, col, cell);
                     Grid.SetRow(entry, row + 1);
                     Grid.SetColumn(entry, col + 1);
                     SpreadsheetGrid.Children.Add(entry);
-                    _entries[row, col] = entry;
+                    rowEntries.Add(entry);
                 }
+                _entries.Add(rowEntries);
             }
         }
 
@@ -200,41 +208,15 @@ namespace SpreadsheetApp
 
             for (int r = 0; r < rows; r++)
             {
+                if (r >= _entries.Count) continue;
                 for (int c = 0; c < cols; c++)
                 {
+                    if (c >= _entries[r].Count) continue;
                     string cellName = Spreadsheet.GetColumnName(c) + (r + 1);
                     var cell = _spreadsheet.GetCell(cellName);
-                    if (cell != null && r < _entries.GetLength(0) && c < _entries.GetLength(1))
+                    if (cell != null)
                     {
-                        EvaluateCell(cell, _entries[r, c]);
-                    }
-                }
-            }
-
-            // Оновлення тексту та кольору для всіх клітинок сітки
-            for (int r = 0; r < rows; r++)
-            {
-                for (int c = 0; c < cols; c++)
-                {
-                    string cellName = Spreadsheet.GetColumnName(c) + (r + 1);
-                    var cell = _spreadsheet.GetCell(cellName);
-                    if (cell != null && r < _entries.GetLength(0) && c < _entries.GetLength(1))
-                    {
-                        var entry = _entries[r, c];
-                        if (string.IsNullOrWhiteSpace(cell.Expression))
-                        {
-                            entry.Text = "";
-                        }
-                        else if (cell.Value != null)
-                        {
-                            entry.Text = FormatCellValue(cell.Value);
-                            entry.TextColor = Colors.White;
-                        }
-                        else
-                        {
-                            entry.Text = "#ERROR";
-                            entry.TextColor = Colors.Red;
-                        }
+                        EvaluateCell(cell, _entries[r][c]);
                     }
                 }
             }
@@ -243,8 +225,36 @@ namespace SpreadsheetApp
         private void AddRowButton_Clicked(object sender, EventArgs e)
         {
             _spreadsheet.AddRow();
-            CreateGrid();
-            RecalculateAll();
+            int newRow = _spreadsheet.RowCount - 1;
+            int cols = _spreadsheet.ColumnCount;
+
+            SpreadsheetGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var label = new Label
+            {
+                Text = (newRow + 1).ToString(),
+                VerticalOptions = LayoutOptions.Center,
+                HorizontalOptions = LayoutOptions.Center,
+                FontAttributes = FontAttributes.Bold,
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+            Grid.SetRow(label, newRow + 1);
+            Grid.SetColumn(label, 0);
+            SpreadsheetGrid.Children.Add(label);
+
+            var rowEntries = new List<Entry>(cols);
+            for (int col = 0; col < cols; col++)
+            {
+                string cellName = Spreadsheet.GetColumnName(col) + (newRow + 1);
+                var cell = _spreadsheet.GetCell(cellName);
+
+                var entry = CreateEntry(newRow, col, cell);
+                Grid.SetRow(entry, newRow + 1);
+                Grid.SetColumn(entry, col + 1);
+                SpreadsheetGrid.Children.Add(entry);
+                rowEntries.Add(entry);
+            }
+            _entries.Add(rowEntries);
         }
 
         private async void DeleteRowButton_Clicked(object sender, EventArgs e)
@@ -254,15 +264,61 @@ namespace SpreadsheetApp
                 await DisplayAlert("Попередження", "Не можна видалити останній рядок. Таблиця повинна містити хоча б один рядок!", "OK");
                 return;
             }
-            CreateGrid();
+
+            int rowToDelete = _spreadsheet.RowCount; // індекс видаленого рядка (0-based)
+            int gridRow = rowToDelete + 1;
+
+            var childrenToRemove = SpreadsheetGrid.Children
+                .Where(c => Grid.GetRow((BindableObject)c) == gridRow)
+                .ToList();
+
+            foreach (var child in childrenToRemove)
+            {
+                SpreadsheetGrid.Children.Remove(child);
+            }
+
+            if (SpreadsheetGrid.RowDefinitions.Count > gridRow)
+            {
+                SpreadsheetGrid.RowDefinitions.RemoveAt(gridRow);
+            }
+
+            if (_entries.Count > rowToDelete)
+            {
+                _entries.RemoveAt(rowToDelete);
+            }
+
             RecalculateAll();
         }
 
         private void AddColumnButton_Clicked(object sender, EventArgs e)
         {
             _spreadsheet.AddColumn();
-            CreateGrid();
-            RecalculateAll();
+            int newCol = _spreadsheet.ColumnCount - 1;
+            int rows = _spreadsheet.RowCount;
+
+            SpreadsheetGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+
+            var headerLabel = new Label
+            {
+                Text = Spreadsheet.GetColumnName(newCol),
+                HorizontalOptions = LayoutOptions.Center,
+                FontAttributes = FontAttributes.Bold
+            };
+            Grid.SetRow(headerLabel, 0);
+            Grid.SetColumn(headerLabel, newCol + 1);
+            SpreadsheetGrid.Children.Add(headerLabel);
+
+            for (int row = 0; row < rows; row++)
+            {
+                string cellName = Spreadsheet.GetColumnName(newCol) + (row + 1);
+                var cell = _spreadsheet.GetCell(cellName);
+
+                var entry = CreateEntry(row, newCol, cell);
+                Grid.SetRow(entry, row + 1);
+                Grid.SetColumn(entry, newCol + 1);
+                SpreadsheetGrid.Children.Add(entry);
+                _entries[row].Add(entry);
+            }
         }
 
         private async void DeleteColumnButton_Clicked(object sender, EventArgs e)
@@ -272,7 +328,32 @@ namespace SpreadsheetApp
                 await DisplayAlert("Попередження", "Не можна видалити останній стовпчик. Таблиця повинна містити хоча б один стовпчик!", "OK");
                 return;
             }
-            CreateGrid();
+
+            int colToDelete = _spreadsheet.ColumnCount; // індекс видаленого стовпчика (0-based)
+            int gridCol = colToDelete + 1;
+
+            var childrenToRemove = SpreadsheetGrid.Children
+                .Where(c => Grid.GetColumn((BindableObject)c) == gridCol)
+                .ToList();
+
+            foreach (var child in childrenToRemove)
+            {
+                SpreadsheetGrid.Children.Remove(child);
+            }
+
+            if (SpreadsheetGrid.ColumnDefinitions.Count > gridCol)
+            {
+                SpreadsheetGrid.ColumnDefinitions.RemoveAt(gridCol);
+            }
+
+            for (int row = 0; row < _entries.Count; row++)
+            {
+                if (_entries[row].Count > colToDelete)
+                {
+                    _entries[row].RemoveAt(colToDelete);
+                }
+            }
+
             RecalculateAll();
         }
 
