@@ -27,8 +27,13 @@
         <Entry x:Name="FormulaBar" Placeholder="Введіть вираз (напр. not (max(A1, B2) >= 5))" 
                Grid.Row="1" Grid.ColumnSpan="2" Margin="10" Unfocused="FormulaBar_Unfocused" />
 
-        <ScrollView Grid.Row="2" Grid.ColumnSpan="2" Margin="10">
-            <Grid x:Name="SpreadsheetGrid">
+        <ScrollView Grid.Row="2" Grid.ColumnSpan="2" Margin="10"
+                    Orientation="Both"
+                    HorizontalScrollBarVisibility="Always"
+                    VerticalScrollBarVisibility="Always">
+            <Grid x:Name="SpreadsheetGrid"
+                  HorizontalOptions="Start"
+                  VerticalOptions="Start">
             </Grid>
         </ScrollView>
     </Grid>
