@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SpreadsheetApp.MainPage">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <FlexLayout Wrap="Wrap" Grid.Row="0" Grid.ColumnSpan="2" Margin="5">
+            <Button Text="Зберегти на Google Drive" Clicked="SaveButton_Clicked" Margin="3" />
+            <Button Text="Завантажити з Google Drive" Clicked="LoadButton_Clicked" Margin="3" />
+            <Button Text="Додати рядок" Clicked="AddRowButton_Clicked" Margin="3" />
+            <Button Text="Видалити рядок" Clicked="DeleteRowButton_Clicked" Margin="3" />
+            <Button Text="Додати стовпчик" Clicked="AddColumnButton_Clicked" Margin="3" />
+            <Button Text="Видалити стовпчик" Clicked="DeleteColumnButton_Clicked" Margin="3" />
+            <Button Text="Довідка" Clicked="HelpButton_Clicked" Margin="3" />
+        </FlexLayout>
+
+        <Entry x:Name="FormulaBar" Placeholder="Введіть вираз (напр. not (max(A1, B2) >= 5))" 
+               Grid.Row="1" Grid.ColumnSpan="2" Margin="10" Unfocused="FormulaBar_Unfocused" />
+
+        <ScrollView Grid.Row="2" Grid.ColumnSpan="2" Margin="10">
+            <Grid x:Name="SpreadsheetGrid">
+            </Grid>
+        </ScrollView>
+    </Grid>
+
+</ContentPage>
+

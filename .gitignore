@@ -1,0 +1,33 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio files
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userprefs
+
+# macOS / Windows junk
+.DS_Store
+Thumbs.db
+
+# Secrets & OAuth credentials
+client_secrets.json
+.authdata/
